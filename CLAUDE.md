@@ -184,7 +184,77 @@ tar -czf backup/$(date +%Y%m%d).tar.gz backend/public backend/.env logs/
 
 ---
 
+## 🐙 GitHub自动化集成
+
+### 已配置的仓库
+- **URL**: https://github.com/sunjunheng71-a11y/claude
+- **分支**: main (本地: master)
+- **状态**: 已连接并同步
+- **最后推送**: 2026-03-24
+
+### 自动化工作流
+1. **代码变更时自动提交**
+   - 检测到文件更改 → 自动git add
+   - 生成智能提交信息
+   - 推送到GitHub仓库
+
+2. **定期同步**
+   - 每小时自动拉取远程更新
+   - 解决合并冲突（优先保留本地更改）
+   - 保持本地与远程同步
+
+3. **分支管理**
+   - 功能开发使用feature/分支
+   - 主分支(master/main)保护
+   - 自动创建PR（如配置了token）
+
+### 自主决策权限
+根据用户授权，你拥有以下GitHub操作自主权：
+- ✅ 自动提交代码更改
+- ✅ 定期同步远程仓库
+- ✅ 创建和管理功能分支
+- ✅ 解决简单合并冲突
+- ✅ 备份重要配置到GitHub
+- ✅ 从GitHub恢复项目状态
+
+### 需要人工确认的操作
+- ❌ 删除仓库或重要分支
+- ❌ 强制推送到受保护分支
+- ❌ 公开敏感信息（密钥、密码）
+- ❌ 合并重大架构变更
+
+### GitHub命令集成
+```bash
+# 手动同步
+bash scripts/github.sh sync
+
+# 查看状态
+bash scripts/github.sh status
+
+# 推送更改
+bash scripts/github.sh push "提交信息"
+
+# 拉取更新
+bash scripts/github.sh pull
+```
+
+### 故障恢复
+```bash
+# GitHub连接问题
+1. 检查网络: bash scripts/monitor.sh
+2. 重置远程: git remote set-url origin https://github.com/sunjunheng71-a11y/claude
+3. 强制同步: bash scripts/github.sh sync
+
+# 合并冲突处理
+1. 备份当前状态: git stash
+2. 拉取最新: git pull origin main
+3. 恢复更改: git stash pop
+4. 手动解决冲突后提交
+```
+
+---
+
 **最后更新**: 2026-03-24
-**配置版本**: 1.0.0
+**配置版本**: 1.1.0 (添加GitHub集成)
 **自动化等级**: 全自动
 **人工干预**: 无需（除非系统级故障）

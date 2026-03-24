@@ -50,11 +50,13 @@
   },
   "hooks": {
     "pre-project": "bash scripts/setup-env.sh",
-    "pre-deploy": "bash scripts/setup-env.sh && bash scripts/stop-all.sh",
+    "pre-deploy": "bash scripts/github.sh sync && bash scripts/setup-env.sh && bash scripts/stop-all.sh",
     "deploy": "bash scripts/deploy.sh",
     "post-deploy": "bash scripts/monitor.sh",
     "pre-commit": "cd frontend && npm run build",
-    "post-commit": "bash scripts/deploy.sh"
+    "post-commit": "bash scripts/github.sh push 'Auto-commit: $(date)' && bash scripts/deploy.sh",
+    "auto-sync": "bash scripts/github.sh sync",
+    "backup": "bash scripts/github.sh push 'Backup: $(date)'"
   },
   "environment": {
     "NODE_ENV": "development",
