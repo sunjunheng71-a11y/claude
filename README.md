@@ -1,72 +1,120 @@
 # AI 全自动开发平台
 
-终端里跟 AI 聊天，帮你写代码、跑测试、部署上线。自动记录笔记到 Obsidian，飞书通知进度。
+这是一个面向零基础用户的 AI 开发工作台。它会安装 Claude Code、启动本地后端服务，并把项目记忆、执行记录和 Obsidian 笔记目录放在同一个项目里，方便持续迭代。
 
-## 安装（3 步）
+## 最简单安装方式：Download ZIP
 
-**第 1 步：下载项目**
+适合不会用命令行的用户。
 
-点绿色 Code → Download ZIP → 解压到任意文件夹
+1. 打开本仓库页面。
+2. 点击绿色 `Code` 按钮。
+3. 点击 `Download ZIP`。
+4. 解压 ZIP。
+5. 右键 `install.bat`，选择“以管理员身份运行”。
 
-**第 2 步：双击 install.bat**
+脚本会自动完成：
 
-右键 → 以管理员身份运行。会自动装好 Node.js、依赖、Claude Code、启动后端。
+- 检查并安装 Node.js LTS
+- 安装后端依赖
+- 安装 `@anthropic-ai/claude-code`
+- 创建 `.env`
+- 启动本地后端服务
 
-**第 3 步：设置 API Key**
-
-打开 PowerShell，运行：
+安装结束后，重新打开 PowerShell：
 
 ```powershell
 claude login
 ```
 
-按提示填入 DeepSeek API Key（去 platform.deepseek.com 注册获取）。
-
-## 使用
-
-在项目目录打开 PowerShell，输入：
+按提示填写你的 API Key。登录完成后，在项目目录运行：
 
 ```powershell
 claude
 ```
 
-然后跟 AI 说话就行：
+## 命令行自动安装方式
 
-- "帮我创建一个网页"
-- "部署一下"
-- "修 bug"
-- "项目现在什么状态"
+适合熟悉 PowerShell 的用户。这个方式会自动下载或更新项目代码。
 
-完成的工作会自动记录到 `obsidian/`。
+以管理员身份打开 PowerShell，然后运行：
 
-## 结构
-
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
-├── backend/          # 后端 API（Express, 端口 3001）
-├── memory/           # AI 记忆
-├── obsidian/         # Obsidian vault（7 个分类）
-├── prompts/          # 提示词存档
-├── scripts/          # 自动化脚本
-├── install.bat       # 一键安装
-└── CLAUDE.md         # AI 助手配置
+
+默认安装目录是：
+
+```text
+%USERPROFILE%\ai-platform
+```
+
+也可以指定安装目录：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -InstallDir "D:\ai-platform"
+```
+
+## 项目结构
+
+```text
+backend/      后端 API，默认端口 3001
+frontend/     前端项目
+memory/       AI 项目记忆
+obsidian/     Obsidian vault
+prompts/      提示词存档
+scripts/      自动化脚本
+install.bat   ZIP 用户的一键安装脚本
+install.ps1   命令行自动下载/更新安装脚本
+CLAUDE.md     Claude Code 项目指令
 ```
 
 ## 飞书通知（可选）
 
-1. 飞书群 → 设置 → 群机器人 → 添加 → 复制 Webhook URL
-2. 编辑 `.env`，填入 `FEISHU_WEBHOOK_URL=地址`
-3. 重启后端
+1. 在飞书群里添加群机器人，复制 Webhook URL。
+2. 编辑项目根目录的 `.env`。
+3. 填写：
+
+```env
+FEISHU_WEBHOOK_URL=你的飞书机器人 Webhook
+```
+
+4. 重启后端服务。
 
 ## Obsidian 笔记
 
-1. 下载 [Obsidian](https://obsidian.md)
-2. 打开 vault → 选择项目里的 `obsidian/` 目录
-3. 所有 AI 工作记录按分类排好
+1. 下载并安装 [Obsidian](https://obsidian.md)。
+2. 打开 vault 时选择项目里的 `obsidian/` 目录。
+3. AI 工作记录和项目资料会按目录保存。
 
 ## 常见问题
 
-**后端启动失败？** 看 `backend\logs\backend.log`
+### `claude` 命令找不到
 
-**claude 命令找不到？** 关闭 PowerShell 重新打开
+关闭当前 PowerShell，重新打开后再运行：
 
-**端口被占用？** 改 `.env` 里 `PORT=3002`
+```powershell
+claude
+```
+
+### 后端没有启动
+
+查看日志：
+
+```text
+logs\backend.log
+logs\backend-error.log
+```
+
+### 端口 3001 被占用
+
+编辑 `.env`，把端口改成其他空闲端口：
+
+```env
+PORT=3002
+```
+
+然后重新启动后端。
+
+### 我已经安装过 Claude Code
+
+脚本会重新执行全局安装命令，通常会更新到可用版本。如果你不想改动现有 Claude Code 环境，请不要运行安装脚本，手动查看脚本内容后选择需要的步骤执行。

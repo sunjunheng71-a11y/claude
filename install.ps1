@@ -1,107 +1,152 @@
-# AI全自动开发平台 - PowerShell 安装
-# 用法: powershell -ExecutionPolicy Bypass -File install.ps1
+param(
+    [string]$InstallDir = "$env:USERPROFILE\ai-platform",
+    [string]$RepoUrl = "https://github.com/sunjunheng71-a11y/claude.git",
+    [int]$Port = 3001
+)
 
-$ErrorActionPreference = "Continue"
-$Host.UI.RawUI.WindowTitle = "AI全自动开发平台 - 安装"
+$ErrorActionPreference = "Stop"
+$Host.UI.RawUI.WindowTitle = "AI Platform - PowerShell Installer"
 
-$INSTALL_DIR = "$env:USERPROFILE\ai-platform"
-$REPO_URL = "https://github.com/sunjunheng71-a11y/claude.git"
-
-Write-Host "`n=== AI 全自动开发平台 - 安装 ===`n" -ForegroundColor Cyan
-
-# 检查管理员
-if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "[!] 需要管理员权限" -ForegroundColor Red
-    exit 1
+function Write-Step {
+    param([string]$Message)
+    Write-Host "`n$Message" -ForegroundColor Cyan
 }
 
-# 1. Node.js
-Write-Host "[1/7] Node.js..." -ForegroundColor Green
-if (Get-Command node -ErrorAction SilentlyContinue) {
-    Write-Host "  [OK] $(node --version)"
-} else {
-    Write-Host "  [!] 未安装，自动安装中..."
-    try {
-        winget install OpenJS.NodeJS.LTS --silent --accept-package-agreements
-    } catch {
-        Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi" -OutFile "$env:TEMP\node.msi"
-        Start-Process msiexec.exe -Wait -ArgumentList "/i `"$env:TEMP\node.msi`" /passive /norestart"
+function Test-Admin {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Refresh-Path {
+    $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $env:Path = "$machinePath;$userPath"
+}
+
+function Ensure-Command {
+    param(
+        [string]$Command,
+        [string]$WingetId,
+        [string]$FallbackUrl,
+        [string]$FallbackFile,
+        [string[]]$FallbackArgs
+    )
+
+    if (Get-Command $Command -ErrorAction SilentlyContinue) {
+        Write-Host "  [OK] $Command is available"
+        return
     }
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-}
 
-# 2. Git
-Write-Host "[2/7] Git..." -ForegroundColor Green
-if (Get-Command git -ErrorAction SilentlyContinue) {
-    Write-Host "  [OK] $(git --version)"
-} else {
-    Write-Host "  [!] 未安装，自动安装中..."
-    try {
-        winget install Git.Git --silent --accept-package-agreements
-    } catch {
-        Invoke-WebRequest -Uri "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe" -OutFile "$env:TEMP\git.exe"
-        Start-Process -Wait -FilePath "$env:TEMP\git.exe" -ArgumentList "/VERYSILENT /NORESTART"
+    Write-Host "  [INFO] $Command was not found. Installing..."
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        winget install $WingetId --silent --accept-package-agreements --accept-source-agreements
+    } else {
+        $target = Join-Path $env:TEMP $FallbackFile
+        Invoke-WebRequest -Uri $FallbackUrl -OutFile $target
+        Start-Process -Wait -FilePath $target -ArgumentList $FallbackArgs
     }
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+    Refresh-Path
+    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) {
+        throw "$Command is still unavailable after installation"
+    }
 }
 
-# 3. Claude Code
-Write-Host "[3/7] Claude Code..." -ForegroundColor Green
-try { npm install -g @anthropic-ai/claude-code; Write-Host "  [OK]" } catch { Write-Host "  [!] 安装失败: $_" }
+Write-Host "`n=== AI Platform - PowerShell Installer ===`n" -ForegroundColor Cyan
 
-# 4. ccswith
-Write-Host "[4/7] ccswith..." -ForegroundColor Green
-if (Test-Path "$env:USERPROFILE\.cc-switch\") { Write-Host "  [OK] 已配置" } else { Write-Host "  [i] 未检测到" }
+if (-not (Test-Admin)) {
+    throw "Run PowerShell as Administrator, then execute this script again."
+}
 
-# 5. 克隆
-Write-Host "[5/7] 项目代码..." -ForegroundColor Green
-if (Test-Path "$INSTALL_DIR\.git") {
-    Set-Location $INSTALL_DIR
-    git pull origin main 2>$null
-    Write-Host "  [OK] 已更新"
+Write-Step "[1/7] Check Node.js"
+Ensure-Command `
+    -Command "node" `
+    -WingetId "OpenJS.NodeJS.LTS" `
+    -FallbackUrl "https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi" `
+    -FallbackFile "node-lts.msi" `
+    -FallbackArgs @("/i", "`"$env:TEMP\node-lts.msi`"", "/passive", "/norestart")
+
+Write-Step "[2/7] Check Git"
+Ensure-Command `
+    -Command "git" `
+    -WingetId "Git.Git" `
+    -FallbackUrl "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe" `
+    -FallbackFile "git-installer.exe" `
+    -FallbackArgs @("/VERYSILENT", "/NORESTART")
+
+Write-Step "[3/7] Install Claude Code"
+npm install -g @anthropic-ai/claude-code
+Write-Host "  [OK] Claude Code installed"
+
+Write-Step "[4/7] Download or update project"
+if (Test-Path (Join-Path $InstallDir ".git")) {
+    Set-Location $InstallDir
+    git pull origin main
+    Write-Host "  [OK] Project updated: $InstallDir"
 } else {
-    New-Item -ItemType Directory -Force -Path $INSTALL_DIR | Out-Null
-    git clone $REPO_URL $INSTALL_DIR
-    Write-Host "  [OK] 克隆完成"
+    if (Test-Path $InstallDir) {
+        $hasFiles = Get-ChildItem $InstallDir -Force -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($hasFiles) {
+            throw "Install directory already exists and is not empty: $InstallDir. Choose another path or clean it manually."
+        }
+    }
+    git clone $RepoUrl $InstallDir
+    Write-Host "  [OK] Project downloaded: $InstallDir"
 }
 
-# 6. npm install
-Write-Host "[6/7] 依赖..." -ForegroundColor Green
-Set-Location "$INSTALL_DIR\backend"
-npm install | Out-Null
-Write-Host "  [OK]"
+Write-Step "[5/7] Install backend dependencies"
+$backendDir = Join-Path $InstallDir "backend"
+if (-not (Test-Path (Join-Path $backendDir "package.json"))) {
+    throw "backend\package.json is missing. The project checkout is incomplete."
+}
+Set-Location $backendDir
+npm install
+Write-Host "  [OK] Backend dependencies installed"
 
-# 7. .env
-Write-Host "[7/7] 配置..." -ForegroundColor Green
-Set-Location $INSTALL_DIR
-if (-not (Test-Path ".env")) {
+Write-Step "[6/7] Prepare .env"
+$envFile = Join-Path $InstallDir ".env"
+if (-not (Test-Path $envFile)) {
     @"
 NODE_ENV=development
-PORT=3001
-PROJECT_ROOT=$INSTALL_DIR
+PORT=$Port
+PROJECT_ROOT=$InstallDir
+
+# Feishu notifications (optional)
+FEISHU_WEBHOOK_URL=
 FEISHU_APP_ID=
 FEISHU_APP_SECRET=
-FEISHU_WEBHOOK_URL=
 FEISHU_VERIFY_TOKEN=
-"@ | Out-File -FilePath ".env" -Encoding UTF8
-    Write-Host "  [OK] 已创建 .env"
-} else { Write-Host "  [OK] .env 已存在" }
-
-# 启动
-Write-Host "`n启动后端..." -ForegroundColor Yellow
-New-Item -ItemType Directory -Force -Path "$INSTALL_DIR\logs" | Out-Null
-Set-Location "$INSTALL_DIR\backend"
-Start-Process -NoNewWindow node -ArgumentList "index.js" -RedirectStandardOutput "$INSTALL_DIR\logs\backend.log" -RedirectStandardError "$INSTALL_DIR\logs\backend-error.log"
-Start-Sleep 2
-
-try {
-    Invoke-RestMethod -Uri "http://localhost:3001/api/health" -TimeoutSec 3 | Out-Null
-    Write-Host "[OK] 服务已启动 http://localhost:3001" -ForegroundColor Green
-} catch {
-    Write-Host "[!] 服务可能未启动: $INSTALL_DIR\logs\backend.log" -ForegroundColor Yellow
+"@ | Set-Content -Path $envFile -Encoding UTF8
+    Write-Host "  [OK] .env created"
+} else {
+    Write-Host "  [OK] .env already exists; leaving it unchanged"
 }
 
-Write-Host "`n=== 完成 ===" -ForegroundColor Cyan
-Write-Host "项目: $INSTALL_DIR"
-Write-Host "用法: claude"
-Write-Host "笔记: $INSTALL_DIR\obsidian`n"
+Write-Step "[7/7] Start backend service"
+$logDir = Join-Path $InstallDir "logs"
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+Set-Location $backendDir
+
+$stdout = Join-Path $logDir "backend.log"
+$stderr = Join-Path $logDir "backend-error.log"
+Start-Process -NoNewWindow -FilePath "node" -ArgumentList "index.js" -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+Start-Sleep -Seconds 3
+
+try {
+    Invoke-RestMethod -Uri "http://localhost:$Port/api/health" -TimeoutSec 3 | Out-Null
+    Write-Host "  [OK] Backend started: http://localhost:$Port" -ForegroundColor Green
+} catch {
+    Write-Host "  [WARN] Backend may not have started. Check logs:" -ForegroundColor Yellow
+    Write-Host "    $stdout"
+    Write-Host "    $stderr"
+}
+
+Write-Host "`n=== Install complete ===" -ForegroundColor Cyan
+Write-Host "Project directory: $InstallDir"
+Write-Host "Backend API: http://localhost:$Port"
+Write-Host "Next steps:"
+Write-Host "  1. Open a new PowerShell window"
+Write-Host "  2. Run claude login and enter your API key"
+Write-Host "  3. Run cd `"$InstallDir`""
+Write-Host "  4. Run claude"
