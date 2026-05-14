@@ -1,210 +1,84 @@
-# AI学习平台 - 大学生AI学习与二维码系统
+# AI 全自动开发平台
 
-## 🎯 项目概述
-一个专为大学生设计的AI学习平台，集成了二维码生成、系统监控和自动化部署功能。通过这个项目，你可以学习AI技术、Web开发和DevOps实践。
+给**编程零基础的人**用的 AI 开发助手。
 
-## 🚀 快速开始
+终端里跟 AI 聊天，它帮你写代码、跑测试、部署上线。自动记录笔记到 Obsidian，飞书通知进度。
 
-### 环境要求
-- Node.js 16+
-- npm 8+
-- Git
+## 安装
 
-### 一键启动
+1. 下载项目
+2. 右键 `install.bat` → 以管理员身份运行
+3. 等待完成
+
+## 使用
+
+打开 PowerShell / 终端：
+
 ```bash
-# 克隆项目（如果从git仓库）
-git clone <repository-url>
-cd ai-learning-platform
-
-# 设置环境
-bash scripts/setup-env.sh
-
-# 启动所有服务
-bash scripts/start-all.sh
+claude
 ```
 
-### 手动设置
-```bash
-# 安装后端依赖
-cd backend
-npm install
+跟 AI 聊天就行：
 
-# 安装前端依赖
-cd ../frontend
-npm install
+- "帮我创建一个网页"
+- "部署到服务器"
+- "修一下这个 bug"
+- "项目现在什么状态"
 
-# 启动后端服务
-cd ../backend
-npm start
+AI 会自动开发、测试、部署，过程记录到 `obsidian/`。
 
-# 启动前端开发服务器（新终端）
-cd ../frontend
-npm run dev
+## 结构
+
 ```
-
-## 📁 项目结构
-```
-D:\claude\
-├── frontend/          # React前端应用
-│   ├── src/
-│   ├── public/
-│   └── package.json
-├── backend/           # Node.js后端API
-│   ├── index.js      # 主服务器文件
-│   ├── public/       # 二维码存储
-│   ├── logs/         # 日志文件
-│   └── package.json
+├── backend/          # 后端 API（Express, 端口 3001）
+│   ├── services/     # 飞书服务
+│   ├── routes/       # API 路由
+│   └── index.js
+├── memory/           # AI 记忆
+├── obsidian/         # Obsidian vault
+│   ├── 01-项目规划/
+│   ├── 02-任务分配/
+│   ├── 03-执行过程/
+│   ├── 04-测试结果/
+│   ├── 05-部署记录/
+│   ├── 06-问题记录/
+│   └── 07-每日总结/
 ├── scripts/          # 自动化脚本
-│   ├── deploy.sh     # 部署脚本
-│   ├── start-all.sh  # 启动所有服务
-│   ├── stop-all.sh   # 停止所有服务
-│   ├── restart.sh    # 重启服务
-│   ├── monitor.sh    # 系统监控
-│   └── setup-env.sh  # 环境设置
-├── docs/             # 文档
-├── logs/             # 系统日志
-└── .claude/          # Claude Code配置
+├── CLAUDE.md         # AI 配置
+└── install.bat       # 一键安装
 ```
 
-## 🔧 功能特性
+## API
 
-### 1. 二维码生成系统
-- **API端点**: `POST /api/generate-qr`
-- **功能**: 将任意文本转换为二维码图片
-- **参数**: `text` (必需), `size` (可选, 默认200)
-- **返回**: QR图片URL和元数据
-
-### 2. 系统监控
-- **健康检查**: `GET /api/health` - 服务状态检查
-- **系统信息**: `GET /api/system-info` - 服务器硬件信息
-- **资源监控**: `GET /api/monitor` - 内存、CPU使用情况
-
-### 3. 自动化部署
-- 一键部署脚本 (`deploy.sh`)
-- 自动依赖安装和构建
-- 服务健康检查
-- 部署日志记录
-
-### 4. Claude Code集成
-- 全自动开发Agent配置
-- 预配置权限和hooks
-- 自动化测试和部署
-
-## 📡 API文档
-
-### 后端API (端口: 3001)
-| 端点 | 方法 | 描述 |
+| 端点 | 方法 | 功能 |
 |------|------|------|
-| `/api/health` | GET | 服务健康检查 |
+| `/api/health` | GET | 健康检查 |
 | `/api/generate-qr` | POST | 生成二维码 |
-| `/api/system-info` | GET | 获取系统信息 |
-| `/api/monitor` | GET | 获取监控数据 |
+| `/api/monitor` | GET | 系统监控 |
+| `/api/system-info` | GET | 系统信息 |
+| `/api/feishu/send` | POST | 发飞书消息 |
+| `/api/feishu/callback` | POST | 接收飞书事件 |
+| `/api/obsidian/write` | POST | 写 Obsidian 笔记 |
+| `/api/obsidian/list` | GET | 列笔记 |
+| `/api/memory/read` | GET | 读记忆 |
+| `/api/memory/write` | POST | 写记忆 |
 
-### 前端开发服务器 (端口: 5173)
-- 开发模式: `http://localhost:5173`
-- 热重载支持
+## 配置飞书
 
-## 🤖 Claude Code自动化配置
+1. 飞书群 → 设置 → 群机器人 → 添加 → 复制 Webhook URL
+2. 编辑 `.env`，填 `FEISHU_WEBHOOK_URL=地址`
+3. `bash scripts/restart.sh`
 
-### 全自动Agent功能
-本项目已配置Claude Code为全自动开发Agent，具备以下能力：
+或: `bash scripts/feishu-setup.sh`
 
-1. **自动开发**: 根据需求生成代码
-2. **自动测试**: 运行测试并修复错误
-3. **自动部署**: 执行部署脚本上线服务
-4. **自动监控**: 持续监控服务状态
+## Obsidian 笔记
 
-### 配置文件
-- `.claude/config.json` - Claude Code配置
-- 预配置权限: bash、文件操作、网络访问
-- 自动化hooks: 部署前、部署后、监控
+1. 下载 [Obsidian](https://obsidian.md)
+2. 打开 vault → 选择 `obsidian/` 目录
+3. AI 的工作记录按分类排好了
 
-### 使用方法
-```bash
-# 让Claude Code接管项目开发
-cd D:\claude
-claude-code --auto
+## 常见问题
 
-# 或通过VSCode扩展使用
-```
+**后端启动失败？** 看 `backend/logs/backend.log`
 
-## 🧠 AI学习资源
-
-### 本项目涉及的技术栈
-1. **前端**: React + Vite + 现代CSS
-2. **后端**: Node.js + Express + RESTful API
-3. **二维码**: qr-image库
-4. **系统监控**: Node.js OS模块
-5. **自动化**: Bash脚本 + 进程管理
-6. **DevOps**: 部署脚本 + 监控工具
-
-### 学习路径
-1. 基础: Web开发、API设计
-2. 进阶: 系统监控、自动化部署
-3. 高级: AI集成、性能优化
-
-## 🛠️ 维护指南
-
-### 常用命令
-```bash
-# 启动所有服务
-bash scripts/start-all.sh
-
-# 停止所有服务
-bash scripts/stop-all.sh
-
-# 重启服务
-bash scripts/restart.sh
-
-# 查看监控
-bash scripts/monitor.sh
-
-# 部署到生产环境
-bash scripts/deploy.sh
-```
-
-### 日志查看
-```bash
-# 后端日志
-tail -f backend/logs/backend.log
-
-# 前端日志
-tail -f frontend/logs/frontend.log
-
-# 部署日志
-tail -f logs/deployments.log
-```
-
-### 故障排查
-1. 检查服务是否运行: `bash scripts/monitor.sh`
-2. 查看错误日志: `backend/logs/backend.log`
-3. 重启服务: `bash scripts/restart.sh`
-4. 重新部署: `bash scripts/deploy.sh`
-
-## 📈 扩展计划
-
-### 短期目标
-- [ ] 添加用户认证系统
-- [ ] 实现二维码历史记录
-- [ ] 添加更多AI学习模块
-- [ ] 优化前端界面
-
-### 长期目标
-- [ ] 集成机器学习模型
-- [ ] 添加实时聊天功能
-- [ ] 实现移动端应用
-- [ ] 部署到云平台
-
-## 📄 许可证
-本项目仅供学习使用，遵循MIT许可证。
-
-## 🤝 贡献指南
-欢迎提交Issue和Pull Request！
-
-## 📞 联系信息
-- 项目维护者: 大学生AI学习者
-- 项目位置: D:\claude
-- 创建时间: 2026年3月24日
-
----
-**💡 提示**: 这是一个学习项目，适合大学生逐步掌握AI和Web开发技术。从基础功能开始，逐步添加复杂特性。
+**飞书收不到通知？** 检查 `.env` 里 `FEISHU_WEBHOOK_URL`

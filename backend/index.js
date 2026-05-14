@@ -4,6 +4,10 @@ const qr = require('qr-image');
 const fs = require('fs');
 const path = require('path');
 
+const feishuRoutes = require('./routes/feishu');
+const obsidianRoutes = require('./routes/obsidian');
+const memoryRoutes = require('./routes/memory');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -12,10 +16,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// 创建public目录用于存储生成的二维码
-if (!fs.existsSync('public')) {
-    fs.mkdirSync('public');
-}
+// 创建必要目录
+const dirs = ['public', 'logs', '../obsidian', '../memory'];
+dirs.forEach(dir => {
+  const d = path.resolve(__dirname, dir);
+  if (!fs.existsSync(d)) {
+    fs.mkdirSync(d, { recursive: true });
+  }
+});
 
 // 健康检查端点
 app.get('/api/health', (req, res) => {
@@ -104,12 +112,39 @@ app.get('/api/monitor', (req, res) => {
     });
 });
 
+// 挂载飞书路由
+app.use('/api/feishu', feishuRoutes);
+
+// 挂载 Obsidian 路由
+app.use('/api/obsidian', obsidianRoutes);
+
+// 挂载记忆系统路由
+app.use('/api/memory', memoryRoutes);
+
+// 部署日志 API
+const deployLogPath = path.join(__dirname, '..', 'logs', 'deployments.log');
+app.get('/api/deploy/log', (req, res) => {
+  try {
+    if (!fs.existsSync(deployLogPath)) {
+      return res.json({ entries: [] });
+    }
+    const content = fs.readFileSync(deployLogPath, 'utf-8');
+    const entries = content.trim().split('\n').filter(Boolean).slice(-20);
+    res.json({ entries });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 启动服务器
 const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🔗 QR Generator: POST http://localhost:${PORT}/api/generate-qr`);
-    console.log(`🖥️  System Info: http://localhost:${PORT}/api/system-info`);
+    console.log(`📊 Health:    http://localhost:${PORT}/api/health`);
+    console.log(`🔗 QR:        POST http://localhost:${PORT}/api/generate-qr`);
+    console.log(`📡 Feishu:    http://localhost:${PORT}/api/feishu/send`);
+    console.log(`📝 Obsidian:  http://localhost:${PORT}/api/obsidian/list`);
+    console.log(`🧠 Memory:    http://localhost:${PORT}/api/memory/list`);
+    console.log(`📋 Deploy:    http://localhost:${PORT}/api/deploy/log`);
 });
 
 // 优雅关闭
